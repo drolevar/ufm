@@ -38,18 +38,6 @@ struct window *newwin(struct screen *s,
 	if(!win)
 		return NULL;
 
-	win->text = AllocatePool(nlines * sizeof(CHAR16 *));
-	if(!win->text) {
-		delwin(win);
-		return NULL;
-	}
-
-	win->attr = AllocatePool(nlines * sizeof(INT32 *));
-	if(!win->attr) {
-		delwin(win);
-		return NULL;
-	}
-
 	win->scr = s;
 	win->curx = 0;
 	win->cury = 0;
@@ -57,6 +45,18 @@ struct window *newwin(struct screen *s,
 	win->begy = begin_y;
 	win->width = ncols;
 	win->height = nlines;
+
+	win->text = AllocateZeroPool(nlines * sizeof(CHAR16 *));
+	if(!win->text) {
+		delwin(win);
+		return NULL;
+	}
+
+	win->attr = AllocateZeroPool(nlines * sizeof(INT32 *));
+	if(!win->attr) {
+		delwin(win);
+		return NULL;
+	}
 	win->cur_attr = s->attr;
 	win->echo = FALSE;
 
@@ -134,7 +134,7 @@ EFI_INPUT_KEY wgetch(struct window *w)
 	gBS->WaitForEvent(1, &stdin->WaitForKey, &key_event);
 	stdin->ReadKeyStroke(stdin, &key);
 
-	if(echo) {
+	if(w->echo) {
 		; // print char
 	}
 	return key;
@@ -222,17 +222,24 @@ VOID waddch(struct window *w, CHAR16 ch, INT32 attr)
 	INT32 y = w->cury;
 
 	if(x >= w->width) {
-		w->curx = 0;
-		if(++w->cury >= w->height)
-			w->cury = 0;
+		x = 0;
+		y++;
+		if(y >= w->height)
+			y = 0;
 	}
-	else
-		w->curx += 1;
 
 	if(ch != 0)
 		w->text[y][x] = ch;
 	if(attr != -1)
 		w->attr[y][x] = attr;
+
+	w->curx = x + 1;
+	w->cury = y;
+	if(w->curx >= w->width) {
+		w->curx = 0;
+		if(++w->cury >= w->height)
+			w->cury = 0;
+	}
 }
 
 BOOLEAN mvwaddch(struct window *w, INT32 x, INT32 y, CHAR16 ch, INT32 attr)
@@ -327,8 +334,8 @@ VOID wrefresh(struct window *w)
 		stdout->SetCursorPosition(stdout, w->begx, w->begy + y);
 		print_ptr = w->text[y];
 
-		for(x = 0; x <= (w->width); x++) {
-			if(w->text[y][x] == CHAR_NULL || attributes != w->attr[y][x])
+		for(x = 0; x < w->width; x++) {
+			if(attributes != w->attr[y][x])
 			{
 				tmp_ch = w->text[y][x];
 				w->text[y][x] = CHAR_NULL;
@@ -336,14 +343,16 @@ VOID wrefresh(struct window *w)
 				w->text[y][x] = tmp_ch;
 
 				print_ptr = &(w->text[y][x]);
-				if(w->text[y][x] != CHAR_NULL) {
-					attributes = w->attr[y][x];
-					stdout->SetAttribute(stdout, attributes);
-				}
+				attributes = w->attr[y][x];
+				stdout->SetAttribute(stdout, attributes);
 			}
 		}
+		// flush remaining text in the row
+		stdout->OutputString(stdout, print_ptr);
 	}
 
-	stdout->SetCursorPosition(stdout, w->begx + w->curx, w->begy + w->cury);
-	stdout->SetAttribute(stdout, w->attr[w->cury][w->curx]);
+	if(w->curx < w->width && w->cury < w->height) {
+		stdout->SetCursorPosition(stdout, w->begx + w->curx, w->begy + w->cury);
+		stdout->SetAttribute(stdout, w->attr[w->cury][w->curx]);
+	}
 }
