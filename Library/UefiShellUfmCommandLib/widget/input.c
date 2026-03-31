@@ -1,5 +1,6 @@
 #include <Library/UefiLib.h>
 #include <Library/DebugLib.h>
+#include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
 
 #include "input.h"
@@ -23,17 +24,18 @@ struct widget_input *input_alloc(struct screen *scr, INT32 x, INT32 y,
 	}
 	wattrset(in->win, attr);
 	whline(in->win, 0, 0, 0, attr, 0);
-	mvwprintf(in->win, 0, 0, def_text);
+	mvwprintf(in->win, 0, 0, L"%s", def_text);
 
 	text_length = StrLen(def_text);
-	in->point = text_length > width ? width : text_length;
 	in->max_size = width;
-	in->buf_len = in->point;
-	in->buffer = AllocateCopyPool((in->max_size + 1) * sizeof(CHAR16), def_text);
+	in->buf_len = text_length > (UINTN)width ? (UINTN)width : text_length;
+	in->point = in->buf_len;
+	in->buffer = AllocateZeroPool((in->max_size + 1) * sizeof(CHAR16));
 	if(!in->buffer) {
 		input_release(in);
 		return NULL;
 	}
+	CopyMem(in->buffer, def_text, in->buf_len * sizeof(CHAR16));
 
 	return in;
 }
@@ -76,32 +78,34 @@ VOID input_handle_char(struct widget_input *in, EFI_INPUT_KEY key)
 		case 0x0:
 			break;
 		case CHAR_BACKSPACE: {
-			if(in->buf_len == 0 || in->point == 0)
+			if(in->buf_len == 0 || in->point <= 0)
 				break;
 
 			for(i = in->point; i < in->buf_len; i++)
 				in->buffer[i - 1] = in->buffer[i];
 			in->buffer[i - 1] = CHAR_NULL;
 			mvwaddch(in->win, i - 1, 0, L' ', -1);
-			mvwprintf(in->win, in->point - 1, 0, in->buffer + in->point - 1);
+			mvwprintf(in->win, in->point - 1, 0, L"%s", in->buffer + in->point - 1);
 
 			in->buf_len--;
 			input_set_point(in, in->point - 1);
+			break;
 		}
 		case CHAR_TAB: 
 		case CHAR_LINEFEED:
 		case CHAR_CARRIAGE_RETURN:
 			break;
 		default: {
-			if(in->buf_len >= (in->max_size-1))
+			if(in->buf_len >= in->max_size)
 				break;
-				
-			for(i = in->max_size-1; i > in->point; i--)
+
+			for(i = in->buf_len; i > (UINTN)in->point; i--)
 				in->buffer[i] = in->buffer[i - 1];
 			in->buffer[in->point] = key.UnicodeChar;
-			wprintf(in->win, in->buffer + in->point);
-
 			in->buf_len++;
+			in->buffer[in->buf_len] = CHAR_NULL;
+			wprintf(in->win, L"%s", in->buffer + in->point);
+
 			input_set_point(in, in->point + 1);
 		}
 
