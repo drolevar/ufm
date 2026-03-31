@@ -205,7 +205,7 @@ BOOLEAN mv(VOID)
 				continue;
 
 			file = dirl_getn(PANEL->dirs, i);
-			status = copy_file(file->FullName, UPANEL->cwd); // NOT UPANEL->cwd!!!
+			status = copy_file(file->FullName, dbox->in->buffer);
 			if(!EFI_ERROR(status))
 				delete_file(file);
 		}

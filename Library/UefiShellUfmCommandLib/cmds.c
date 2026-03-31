@@ -19,8 +19,8 @@ STATIC BOOLEAN is_dir_empty(SHELL_FILE_HANDLE FileHandle)
 		!no_file && !EFI_ERROR (status);
 		FileHandleFindNextFile(FileHandle, file_info, &no_file))
 	{
-		if(StrStr(file_info->FileName, L".") != file_info->FileName &&
-				StrStr(file_info->FileName, L"..") != file_info->FileName) {
+		if(StrCmp(file_info->FileName, L".") != 0 &&
+				StrCmp(file_info->FileName, L"..") != 0) {
 			ret = FALSE;
 		}
 	}
@@ -45,11 +45,11 @@ STATIC INTN StrNoCaseCmpN(CONST CHAR16 *src, CONST CHAR16 *target, CONST UINTN c
 	target_length = StrLen(target);
 	src_length = MIN(src_length, cnt);
 	target_length = MIN(target_length, cnt);
-	src_copy = AllocateCopyPool((src_length + 1) * sizeof (CHAR16), src);
+	src_copy = AllocateCopyPool((StrLen(src) + 1) * sizeof (CHAR16), src);
 	if(!src_copy)
 		return -1;
 
-	target_copy = AllocateCopyPool((target_length + 1) * sizeof (CHAR16), target);
+	target_copy = AllocateCopyPool((StrLen(target) + 1) * sizeof (CHAR16), target);
 	if(!target_copy) {
 		FreePool (src_copy);
 		return -1;
@@ -143,7 +143,7 @@ STATIC EFI_STATUS copy_to_dir(CONST EFI_SHELL_FILE_INFO *list,
 		if(StrCmp(node->FileName, L".") == 0 || StrCmp(node->FileName, L"..") == 0)
 			continue;
 
-		new_length = StrLen(dest) + StrLen(node->FullName) + 1;
+		new_length = StrLen(dest) + StrLen(node->FullName) + 2;
 		new_length += (cwd == NULL) ? 0 : (StrLen(cwd) + 1);
 		if(new_length > max_length)
 			max_length = new_length;
@@ -188,7 +188,7 @@ STATIC EFI_STATUS copy_to_dir(CONST EFI_SHELL_FILE_INFO *list,
 			if(dest[StrLen(dest) - 1] != L'\\' && node->FileName[0] != L'\\')
 				StrCatS(dest_path, max_length, L"\\");
 			else if(dest[StrLen(dest) - 1] == L'\\' && node->FileName[0] == L'\\')
-				((CHAR16*)dest)[StrLen(dest) - 1] = CHAR_NULL;
+				((CHAR16*)dest_path)[StrLen(dest_path) - 1] = CHAR_NULL;
 		}
 		StrCatS(dest_path, max_length, node->FileName);
 
@@ -240,12 +240,17 @@ STATIC EFI_STATUS copy_single_file(CONST CHAR16 *src, CONST CHAR16 *dest)
 		return EFI_ACCESS_DENIED;
 
 	status = ShellOpenFileByName(src, &src_handle, EFI_FILE_MODE_READ, 0);
-	if(EFI_ERROR(status)) 
+	if(EFI_ERROR(status)) {
+		ShellCloseFile(&dest_handle);
 		return EFI_ACCESS_DENIED;
+	}
 
 	buffer = AllocateZeroPool(read_size);
-	if(buffer == NULL)
+	if(buffer == NULL) {
+		ShellCloseFile(&dest_handle);
+		ShellCloseFile(&src_handle);
 		return EFI_OUT_OF_RESOURCES;
+	}
 
 	while(read_size == PcdGet32(PcdShellFileOperationSize) && !EFI_ERROR(status))
 	{
@@ -258,6 +263,7 @@ STATIC EFI_STATUS copy_single_file(CONST CHAR16 *src, CONST CHAR16 *dest)
 			break;
 	}
 
+	FreePool(buffer);
 	if(dest_handle != NULL)
 		ShellCloseFile(&dest_handle);
 	if(src_handle != NULL)
@@ -282,6 +288,8 @@ EFI_STATUS copy_file(CONST CHAR16 *src, CONST CHAR16 *dest)
 		status = ShellCreateDirectory(dest, &dest_handle);
 		if(EFI_ERROR(status))
 			return EFI_ACCESS_DENIED;
+		if(dest_handle != NULL)
+			ShellCloseFile(&dest_handle);
 
 		StrnCatGrow(&temp_name, &size, src, 0);
 		StrnCatGrow(&temp_name, &size, L"\\*", 0);
@@ -339,9 +347,9 @@ EFI_STATUS make_directory(CONST CHAR16 *dir_name)
 	// create the nested directory from parent to child:
 	// if dir_name = test1\test2\test3, first create "test1\" directory, then "test1\test2\", finally "test1\test2\test3".
 	tmp_str = AllocateCopyPool(StrSize(dir_name), dir_name);
-	tmp_str = PathCleanUpDirectories(tmp_str);
 	if(tmp_str == NULL)
 		return EFI_OUT_OF_RESOURCES;
+	PathCleanUpDirectories(tmp_str);
 
 	split_name = tmp_str;
 	while(split_name != NULL) {
