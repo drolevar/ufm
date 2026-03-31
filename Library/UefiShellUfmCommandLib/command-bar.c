@@ -29,7 +29,7 @@ struct window *init_cmdbar(struct screen *scr, CONST struct shortcut *shortcuts)
 			amount_cmds++;
 	}
 
-	cmd_length = ((cmdbar->width + 1) - (BUTTON_LENGTH * amount_cmds)) / amount_cmds;
+	cmd_length = (cmdbar->width - (BUTTON_LENGTH * amount_cmds)) / amount_cmds;
 	for(i = 0; shortcuts[i].type != ACTION_LAST; i++) {
 		if(shortcuts[i].type == ACTION_CMD) {
 			wattrset(cmdbar, attr_button);

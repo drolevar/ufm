@@ -6,7 +6,7 @@
 
 struct window *init_menubar(struct screen *scr)
 {
-	struct window *menubar = newwin(scr, scr->columns, 1, 0, 0);
+	struct window *menubar = newwin(scr, scr->columns - 1, 1, 0, 0);
 	if(!menubar)
 		return NULL;
 
