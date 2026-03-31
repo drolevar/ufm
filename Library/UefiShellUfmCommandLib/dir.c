@@ -46,7 +46,7 @@ struct dir_list *dirl_alloc(CHAR16 *search_path, CONST UINT64 attr)
 		length++;
 	}
 
-	dl = AllocatePool(sizeof(struct dir_list));
+	dl = AllocateZeroPool(sizeof(struct dir_list));
 	if(!dl) {
 		ShellCloseFileMetaArg(&list_head);
 		return NULL;
@@ -54,10 +54,12 @@ struct dir_list *dirl_alloc(CHAR16 *search_path, CONST UINT64 attr)
 
 	dl->list_head = list_head;
 	dl->len = length;
-	dl->marked = AllocateZeroPool(length * sizeof(BOOLEAN));
-	if(!dl->marked) {
-		dirl_release(dl);
-		return NULL;
+	if(length > 0) {
+		dl->marked = AllocateZeroPool(length * sizeof(BOOLEAN));
+		if(!dl->marked) {
+			dirl_release(dl);
+			return NULL;
+		}
 	}
 	return dl;
 }	

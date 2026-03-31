@@ -82,7 +82,7 @@ STATIC VOID display_files(struct panel_ctx *p, UINTN start_index)
 	list_head = p->dirs->list_head;
 
 	node = dirl_getn(p->dirs, start_index);
-	for(i = 0; i <= p->list_lines; i++)
+	for(i = 0; i < p->list_lines; i++)
 	{
 		if(IsNull(&list_head->Link, &node->Link) || 
 				((start_index + i) > p->dirs->len)) {
@@ -107,7 +107,7 @@ STATIC VOID display_files(struct panel_ctx *p, UINTN start_index)
 				SIZE_COLS, SIZE_COLS, L"<dir>");
 		else
 			mvwprintf(p->wlist, p->name_cols, i, L"%c%*d%c", BOXDRAW_VERTICAL,
-				SIZE_COLS, node->Info->FileSize);
+				SIZE_COLS, node->Info->FileSize, BOXDRAW_VERTICAL);
 
 		// column "modify time"
 		mvwprintf(p->wlist, p->wlist->width - MODIFYTIME_COLS - 1, i, 
@@ -129,7 +129,7 @@ STATIC VOID highlight_line(struct panel_ctx *p, UINTN line, INT32 fg, INT32 bg)
 	INT32 attr;
 	UINTN ui_line;
 
-	ui_line = (line-1) % p->list_lines;
+	ui_line = line - p->start_entry;
 	attr = p->wlist->attr[ui_line][0];
 	if(fg < 0x0)
 		fg = attr & 0x0F;
@@ -308,7 +308,7 @@ BOOLEAN panel_cd_to(struct panel_ctx *p, CONST CHAR16 *path)
 	// We make a copy of the path string because the next step is to 
 	// free the struct dir_list 
 	if(path) {
-		own_path = AllocateCopyPool(StrSize(path) + 1, path);
+		own_path = AllocateCopyPool(StrSize(path), path);
 		if(!own_path)
 			return FALSE;
 	}
@@ -355,6 +355,9 @@ BOOLEAN panel_mark_file(struct panel_ctx *p, UINTN line)
 	UINTN idx = line - 1;
 
 	if(!p->cwd) // we can mark only files
+		return FALSE;
+
+	if(!p->dirs->marked) // empty directory
 		return FALSE;
 
 	if(p->dirs->marked[idx]) {
