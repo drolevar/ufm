@@ -1,0 +1,49 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm iasl uuid-dev python3 gcc make
+
+      - name: Bootstrap
+        run: ./bootstrap.sh
+
+      - name: Build
+        run: make
+
+      - name: Find artifacts
+        id: artifacts
+        run: |
+          OUTDIR="edk2/Build/Shell/RELEASE_GCC5/X64"
+          UFM_APP=$(find "$OUTDIR" -name "UfmApp.efi" -path "*/OUTPUT/*" | head -1)
+          SHELL_EFI=$(find "$OUTDIR" -name "Shell.efi" -path "*/OUTPUT/*" | head -1)
+          echo "ufm_app=$UFM_APP" >> "$GITHUB_OUTPUT"
+          echo "shell_efi=$SHELL_EFI" >> "$GITHUB_OUTPUT"
+
+      - name: Upload UfmApp.efi
+        uses: actions/upload-artifact@v4
+        with:
+          name: UfmApp-x64
+          path: ${{ steps.artifacts.outputs.ufm_app }}
+
+      - name: Upload Shell+UFM
+        uses: actions/upload-artifact@v4
+        with:
+          name: ShellUfm-x64
+          path: ${{ steps.artifacts.outputs.shell_efi }}
