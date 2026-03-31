@@ -37,10 +37,10 @@ fi
 # Step 4: Create symlinks
 echo "==> Creating symlinks..."
 
-ln -sfn ../../Library/UefiShellUfmCommandLib \
+ln -sfn ../../../Library/UefiShellUfmCommandLib \
     edk2/ShellPkg/Library/UefiShellUfmCommandLib
 
-ln -sfn ../../Application/UfmApp \
+ln -sfn ../../../Application/UfmApp \
     edk2/ShellPkg/Application/UfmApp
 
 mkdir -p edk2/ShellPkg/Include/Library
@@ -54,15 +54,15 @@ if ! grep -q "$UFM_PATCH_MARKER" "$DSC"; then
 
     # Add UfmCommandLib to [LibraryClasses.common]
     sed -i "/^\[LibraryClasses.common\]/a\\
-  UfmCommandLib|ShellPkg/Library/UefiShellUfmCommandLib/UefiShellUfmCommandLib.inf $UFM_PATCH_MARKER" "$DSC"
+$UFM_PATCH_MARKER\n  UfmCommandLib|ShellPkg/Library/UefiShellUfmCommandLib/UefiShellUfmCommandLib.inf" "$DSC"
 
     # Add UfmApp.inf to [Components] section
     sed -i "/^\[Components\]/a\\
-  ShellPkg/Application/UfmApp/UfmApp.inf $UFM_PATCH_MARKER" "$DSC"
+$UFM_PATCH_MARKER\n  ShellPkg/Application/UfmApp/UfmApp.inf" "$DSC"
 
     # Add UFM library to both Shell.inf <LibraryClasses> blocks
     sed -i "/<LibraryClasses>/a\\
-      NULL|ShellPkg/Library/UefiShellUfmCommandLib/UefiShellUfmCommandLib.inf $UFM_PATCH_MARKER" "$DSC"
+      NULL|ShellPkg/Library/UefiShellUfmCommandLib/UefiShellUfmCommandLib.inf" "$DSC"
 else
     echo "==> ShellPkg.dsc already patched, skipping."
 fi
@@ -73,7 +73,7 @@ if ! grep -q "$UFM_PATCH_MARKER" "$DEC"; then
     echo "==> Patching ShellPkg.dec..."
 
     sed -i "/^\[LibraryClasses\]/a\\
-  UfmCommandLib|Include/Library/UfmCommandLib.h $UFM_PATCH_MARKER" "$DEC"
+$UFM_PATCH_MARKER\n  UfmCommandLib|Include/Library/UfmCommandLib.h" "$DEC"
 else
     echo "==> ShellPkg.dec already patched, skipping."
 fi
