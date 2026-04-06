@@ -75,6 +75,18 @@ BOOLEAN change_panel(VOID)
 	return TRUE;
 }
 
+STATIC CONST CHAR16 *get_last_dir_name(CONST CHAR16 *path)
+{
+	CONST CHAR16 *last = path;
+	CONST CHAR16 *p;
+
+	for(p = path; *p != CHAR_NULL; p++) {
+		if(*p == L'\\' && *(p + 1) != CHAR_NULL)
+			last = p + 1;
+	}
+	return last;
+}
+
 BOOLEAN execute(VOID)
 {
 	EFI_SHELL_FILE_INFO *file;
@@ -82,10 +94,30 @@ BOOLEAN execute(VOID)
 
 	if(!PANEL->cwd)
 		return panel_cd_to(PANEL, PANEL->fsa->full_name[PANEL->curline-1]);
-	
+
 	file = dirl_getn(PANEL->dirs, PANEL->curline);
-	if((file->Info->Attribute & EFI_FILE_DIRECTORY) != 0)
+	if((file->Info->Attribute & EFI_FILE_DIRECTORY) != 0) {
+		if(StrCmp(file->FileName, L"..") == 0 && PANEL->cwd) {
+			CONST CHAR16 *last = get_last_dir_name(PANEL->cwd);
+			CHAR16 *prev_dir = AllocateCopyPool(StrSize(last), last);
+			UINTN i;
+			EFI_SHELL_FILE_INFO *entry;
+
+			panel_cd_to(PANEL, file->FullName);
+			if(prev_dir) {
+				for(i = 1; i <= (UINTN)PANEL->dirs->len; i++) {
+					entry = dirl_getn(PANEL->dirs, i);
+					if(StrCmp(entry->FileName, prev_dir) == 0) {
+						panel_move_cursor(PANEL, i);
+						break;
+					}
+				}
+				FreePool(prev_dir);
+			}
+			return TRUE;
+		}
 		return panel_cd_to(PANEL, file->FullName);
+	}
 
 	shell_exec2(L"", file->FullName, &cmd_status);
 	redraw();
@@ -166,8 +198,10 @@ BOOLEAN cp(VOID)
 		}
 		panel_cd_to(PANEL, PANEL->cwd);
 		panel_move_cursor(PANEL, (line > PANEL->dirs->len) ? PANEL->dirs->len : line);
+		if(UPANEL->cwd)
+			panel_cd_to(UPANEL, UPANEL->cwd);
 	}
-	
+
 	redraw();
 	FreePool(label);
 	dbox_release(dbox);
@@ -211,8 +245,10 @@ BOOLEAN mv(VOID)
 		}
 		panel_cd_to(PANEL, PANEL->cwd);
 		panel_move_cursor(PANEL, (line > PANEL->dirs->len) ? PANEL->dirs->len : line);
+		if(UPANEL->cwd)
+			panel_cd_to(UPANEL, UPANEL->cwd);
 	}
-	
+
 	redraw();
 	FreePool(label);
 	dbox_release(dbox);

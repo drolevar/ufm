@@ -10,7 +10,6 @@ struct window *init_menubar(struct screen *scr)
 	if(!menubar)
 		return NULL;
 
-	mvwprintf(menubar, 0, 0, L"Menu bar");
 	menubar_refresh(menubar);
 	return menubar;
 }

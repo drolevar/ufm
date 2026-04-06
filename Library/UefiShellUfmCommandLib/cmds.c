@@ -105,10 +105,15 @@ EFI_STATUS delete_file(EFI_SHELL_FILE_INFO *node)
 		}
 	}
 
-	if(StrCmp(node->FileName, L".") != 0 && 
+	if(StrCmp(node->FileName, L".") != 0 &&
 			StrCmp(node->FileName, L"..") != 0) {
-		// delete the current node
-		status = gEfiShellProtocol->DeleteFile(node->Handle);
+		// re-open with write access for deletion
+		if(node->Handle != NULL)
+			gEfiShellProtocol->CloseFile(node->Handle);
+		status = gEfiShellProtocol->OpenFileByName(node->FullName, &node->Handle,
+			EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE);
+		if(!EFI_ERROR(status))
+			status = gEfiShellProtocol->DeleteFile(node->Handle);
 		node->Handle = NULL;
 	}
 
