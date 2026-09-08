@@ -20,7 +20,7 @@ struct window *init_cmdbar(struct screen *scr, CONST struct shortcut *shortcuts)
 	the cursor to a new line, after writing to the last cell of the line.
 	Therefore, menu bar will dissapear from the first line and there will be
 	an empty last line */
-	cmdbar = newwin(scr, scr->columns - 1, 1, 0, scr->lines - 1);
+	cmdbar = newwin(scr, scr->columns, 1, 0, scr->lines - 1);
 	if(!cmdbar)
 		return NULL;
 

@@ -153,7 +153,7 @@ STATIC VOID set_cwd(struct panel_ctx *p, CONST CHAR16 *path)
 	gEfiShellProtocol->SetCurDir(NULL, p->cwd);
 	whline(p->wcwd, 0, 0, BOXDRAW_HORIZONTAL, p->wcwd->cur_attr, p->wcwd->width);
 	wattrset(p->wcwd, EFI_TEXT_ATTR(EFI_WHITE, EFI_BLACK));
-	mvwprintf(p->wcwd, 0, 0, L" %s ", p->cwd ? p->cwd : L" ");
+	mvwprintf(p->wcwd, 0, 0, L" %s ", p->cwd ? p->cwd : L"FSs");
 	wattroff(p->wcwd);
 	wrefresh(p->wcwd);
 }

@@ -47,9 +47,25 @@ STATIC BOOLEAN search_list(CONST CHAR16 *list, CONST CHAR16 *target,
 	return FALSE;
 }
 
+STATIC UINTN fs_name_to_num(CONST CHAR16 *name)
+{
+	UINTN num = 0;
+	CONST CHAR16 *p = name;
+
+	// skip "FS" prefix
+	while(*p != CHAR_NULL && (*p < L'0' || *p > L'9'))
+		p++;
+	while(*p >= L'0' && *p <= L'9') {
+		num = num * 10 + (*p - L'0');
+		p++;
+	}
+	return num;
+}
+
 struct fs_array *fsa_alloc(EFI_HANDLE *handles, UINTN count)
 {
-	UINTN i;
+	UINTN i, j;
+	CHAR16 *tmp;
 	struct fs_array *fsa;
 	EFI_DEVICE_PATH_PROTOCOL *dev_path;
 	CONST CHAR16 *map_list;
@@ -70,6 +86,17 @@ struct fs_array *fsa_alloc(EFI_HANDLE *handles, UINTN count)
 		map_list = gEfiShellProtocol->GetMapFromDevicePath(&dev_path);
 		search_list(map_list, L"FS*:", &fsa->full_name[i], TRUE, L";");
 		ASSERT(fsa->full_name[i] != NULL);
+	}
+
+	// sort by FS number (insertion sort)
+	for(i = 1; i < count; i++) {
+		tmp = fsa->full_name[i];
+		j = i;
+		while(j > 0 && fs_name_to_num(fsa->full_name[j - 1]) > fs_name_to_num(tmp)) {
+			fsa->full_name[j] = fsa->full_name[j - 1];
+			j--;
+		}
+		fsa->full_name[j] = tmp;
 	}
 
 	return fsa;

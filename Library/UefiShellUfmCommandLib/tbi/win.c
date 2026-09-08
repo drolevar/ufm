@@ -331,10 +331,18 @@ VOID wrefresh(struct window *w)
 	stdout->SetAttribute(stdout, attributes);
 
 	for(y = 0; y < w->height; y++) {
-		stdout->SetCursorPosition(stdout, w->begx, w->begy + y);
+		UINTN screen_y = w->begy + y;
+		UINTN row_limit = w->width;
+
+		// skip the last cell of the last screen line to prevent firmware scroll
+		if(screen_y == w->scr->lines - 1 &&
+				w->begx + w->width >= w->scr->columns)
+			row_limit = w->scr->columns - w->begx - 1;
+
+		stdout->SetCursorPosition(stdout, w->begx, screen_y);
 		print_ptr = w->text[y];
 
-		for(x = 0; x < w->width; x++) {
+		for(x = 0; x < row_limit; x++) {
 			if(attributes != w->attr[y][x])
 			{
 				tmp_ch = w->text[y][x];

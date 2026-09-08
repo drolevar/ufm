@@ -171,12 +171,15 @@ BOOLEAN cp(VOID)
 	CHAR16 *label;
 	EFI_SHELL_FILE_INFO *file;
 	BOOLEAN status_op;
+	BOOLEAN auto_marked = FALSE;
 
 	if(!PANEL->cwd)
 		return FALSE;
 
-	if(PANEL->marked < 1)
-		return FALSE;
+	if(PANEL->marked < 1) {
+		panel_mark_file(PANEL, PANEL->curline);
+		auto_marked = TRUE;
+	}
 
 	size = (StrLen(cp_label) + FILECOUNT_LENGTH + 1) * sizeof(CHAR16);
 	label = AllocatePool(size);
@@ -201,6 +204,9 @@ BOOLEAN cp(VOID)
 		if(UPANEL->cwd)
 			panel_cd_to(UPANEL, UPANEL->cwd);
 	}
+	else if(auto_marked) {
+		panel_mark_file(PANEL, line);
+	}
 
 	redraw();
 	FreePool(label);
@@ -216,12 +222,15 @@ BOOLEAN mv(VOID)
 	EFI_SHELL_FILE_INFO *file;
 	EFI_STATUS status;
 	BOOLEAN status_op;
+	BOOLEAN auto_marked = FALSE;
 
 	if(!PANEL->cwd)
 		return FALSE;
 
-	if(PANEL->marked < 1)
-		return FALSE;
+	if(PANEL->marked < 1) {
+		panel_mark_file(PANEL, PANEL->curline);
+		auto_marked = TRUE;
+	}
 
 	size = (StrLen(mv_label) + FILECOUNT_LENGTH + 1) * sizeof(CHAR16);
 	label = AllocatePool(size);
@@ -247,6 +256,9 @@ BOOLEAN mv(VOID)
 		panel_move_cursor(PANEL, (line > PANEL->dirs->len) ? PANEL->dirs->len : line);
 		if(UPANEL->cwd)
 			panel_cd_to(UPANEL, UPANEL->cwd);
+	}
+	else if(auto_marked) {
+		panel_mark_file(PANEL, line);
 	}
 
 	redraw();
@@ -291,12 +303,15 @@ BOOLEAN rm(VOID)
 	CHAR16 *label;
 	EFI_SHELL_FILE_INFO *file;
 	BOOLEAN status_op;
+	BOOLEAN auto_marked = FALSE;
 
 	if(!PANEL->cwd)
 		return FALSE;
 
-	if(PANEL->marked < 1)
-		return FALSE;
+	if(PANEL->marked < 1) {
+		panel_mark_file(PANEL, PANEL->curline);
+		auto_marked = TRUE;
+	}
 
 	size = (StrLen(rm_label) + FILECOUNT_LENGTH + 1) * sizeof(CHAR16);
 	label = AllocatePool(size);
@@ -319,7 +334,10 @@ BOOLEAN rm(VOID)
 		panel_cd_to(PANEL, PANEL->cwd);
 		panel_move_cursor(PANEL, (line > PANEL->dirs->len) ? PANEL->dirs->len : line);
 	}
-	
+	else if(auto_marked) {
+		panel_mark_file(PANEL, line);
+	}
+
 	redraw();
 	FreePool(label);
 	dbox_release(dbox);

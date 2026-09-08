@@ -28,7 +28,8 @@ endef
 
 .PHONY: all standalone shell clean
 
-all: standalone shell
+all:
+	@$(call EDK2_BUILD,)
 
 standalone:
 	@$(call EDK2_BUILD,-m ShellPkg/Application/UfmApp/UfmApp.inf)
